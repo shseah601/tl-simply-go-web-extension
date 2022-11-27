@@ -5,13 +5,21 @@ export enum Sender {
     Content
 }
 
-export enum SimplyGoMethod {
-    InitAllFeature = 'initAllFeature',
-    DestoryAllFeature = 'destroyAllFeature',
+export enum SimplyGoMethodEnum {
+    SwitchChanged = 'switchChanged',
+    TabUrlChanged = 'tabUrlChanged',
+    Debugging = 'debugging',
 }
 
-export enum SimplyGoStorageKey {
+export enum SimplyGoSwitchKeyEnum {
     AllExtensionEnabled = 'allExtensionEnabled',
+    BootstrapEnabled = 'bootstrapEnabled',
+    AutoCalculationOnLoad = 'autoCalculationOnLoad',
+    MonthlyFilterEnabled = 'monthlyFilterEnabled',
+}
+
+export enum SimplyGoStorageKeyEnum {
+
 }
 
 export interface ChromeMessage {

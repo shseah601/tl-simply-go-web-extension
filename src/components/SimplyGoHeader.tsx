@@ -1,7 +1,6 @@
 
 
 import { AppBar, Avatar, Box, Link, Toolbar, Typography } from "@mui/material";
-import { useState } from "react";
 
 function SimplyGoHeader() {
 

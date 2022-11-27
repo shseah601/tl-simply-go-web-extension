@@ -1,6 +1,5 @@
 import { Link, Typography } from "@mui/material";
 import { useState } from "react";
-import { currentTabGoToLink } from "../helpers/helper";
 
 function NonSimplyGoURLMessage(props: { isSimplyGoURL: boolean; }) {
   const isSimplyGoURL = props.isSimplyGoURL;

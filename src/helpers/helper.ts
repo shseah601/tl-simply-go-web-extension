@@ -66,3 +66,10 @@ export function excludePrimitiveArrayElement<T, K extends ValueOf<T[]>>(arr: T[]
 export function excludeMultiplePrimitiveArrayElement<T, K extends ValueOf<T[]>[]>(arr: T[], elements: K) {
     return arr.filter((x) => !elements.includes(x as any));
 }
+
+export function getKeyByValue<T extends object, K extends keyof T>(obj: T, value: string): K | undefined {
+    if (Array.isArray(obj)) return undefined;
+
+    const indexOfValue = Object.values(obj).indexOf(value);
+    return Object.keys(obj as object)[indexOfValue] as K;
+}

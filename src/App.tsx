@@ -7,16 +7,41 @@ import {
   ThemeProvider,
   Box,
   Paper,
-  FormControlLabel,
   Switch,
-  Button,
+  Typography,
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import NonSimplyGoURLMessage from './components/NonSimplyGoURLMessage';
 import SimplyGoHeader from './components/SimplyGoHeader';
 import SimplyGoFooter from './components/SimplyGoFooter';
-import { ChromeMessage, Sender, SimplyGoMethod, SimplyGoStorageKey } from './types';
+import { ChromeMessage, Sender, SimplyGoMethodEnum, SimplyGoSwitchKeyEnum } from './types';
 import { getActiveChromeTab } from './helpers/helper';
+
+const switchKeyList = Object.values(SimplyGoSwitchKeyEnum);
+
+const switchList: { key: string, label: string }[] = [
+  {
+    key: SimplyGoSwitchKeyEnum.AllExtensionEnabled,
+    label: 'All Features',
+  },
+  {
+    key: SimplyGoSwitchKeyEnum.BootstrapEnabled,
+    label: 'Bootstrap CSS',
+  },
+  {
+    key: SimplyGoSwitchKeyEnum.AutoCalculationOnLoad,
+    label: 'Auto Run Calculation',
+  },
+  {
+    key: SimplyGoSwitchKeyEnum.MonthlyFilterEnabled,
+    label: 'Monthly Filter',
+  }
+];
+
+const initSwitchesEnabled: { [key: string]: boolean } = {};
+for (const key of switchKeyList) {
+  initSwitchesEnabled[key] = true;
+}
 
 function App() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
@@ -31,74 +56,53 @@ function App() {
     [prefersDarkMode],
   );
 
-  const [currentTabUrl, setCurrentTabUrl] = useState<string>('');
-  const [isSimplyGoURL, setIsSimplyGoURL] = useState<boolean>(false);
-  const [allExtensionEnabled, setAllExtensionEnabled] = useState<boolean>(true);
-  const [responseFromContent, setResponseFromContent] = useState<string>('');
+  const [, setCurrentTabUrl] = useState<string>('');
+  const [isSimplyGoURL, setIsSimplyGoURL] = useState<boolean>(true);
+  const [switchesEnabled, setSwitchesEnabled] = useState<{[key: string]: boolean}>(initSwitchesEnabled);
+  const [allExtensionIsEnabled, setAllExtensionIsEnabled] = useState<boolean>(true);
+  const [, setResponseFromContent] = useState<string>('');
+  
+  // chrome.tabs?.onUpdated.addListener(
+  //   (tabId, changeInfo, tab) => {
+  //     if (tab.active && changeInfo.url) {
+  //       processTabUrl(changeInfo.url);
 
-  chrome.tabs?.onUpdated.addListener(
-    (tabId, changeInfo, tab) => {
-      if (tab.active && changeInfo.url) {
-        processTabUrl(changeInfo.url);
-      }
-    }
-  )
+  //       const chromeMessage: ChromeMessage = {
+  //         from: Sender.React,
+  //         message: {
+  //           type: SimplyGoMethodEnum.TabUrlChanged,
+  //           data: changeInfo.url
+  //         },
+  //       }
 
-
-
-  function processTabUrl(tabUrl: string | undefined) {
-    if (tabUrl) {
-      setCurrentTabUrl(tabUrl);
-
-      const urlObj = new URL(tabUrl);
-      setIsSimplyGoURL(urlObj.host === process.env.REACT_APP_SIMPLYGO_DOMAIN)
-    }
-  }
+  //       chrome.tabs?.sendMessage(
+  //         tabId,
+  //         chromeMessage,
+  //         (response) => {
+  //           setResponseFromContent(response);
+  //         }
+  //       );
+        
+  //     }
+  //   }
+  // )
 
   /**
    * Get current URL
    */
-   const fetchTabs = useCallback(async () => {
+  const fetchTabs = useCallback(async () => {
     const tab = await getActiveChromeTab();
 
     if (!tab) return;
 
     processTabUrl(tab.url);
-  }, [])
-
-  const fetchAllExtensionEnabled = useCallback(async () => {
-    const storage = await chrome.storage?.sync.get([SimplyGoStorageKey.AllExtensionEnabled])
-    setAllExtensionEnabled(storage.allExtensionEnabled || false);
-  }, [])
-
-  useEffect(() => {
-    fetchTabs();
-    fetchAllExtensionEnabled();
-  }, [fetchTabs, fetchAllExtensionEnabled]);
-
-  async function allExtensionFeatureOnChanged(event: React.SyntheticEvent) {
-    const target = event.target as HTMLInputElement
-    setAllExtensionEnabled(target.checked);
-
-    let message = {
-      type: '',
-    };
-
-    if (target.checked) {
-      message.type = SimplyGoMethod.InitAllFeature;
-    } else {
-      message.type = SimplyGoMethod.DestoryAllFeature;
-    }
-
-    await chrome.storage?.sync.set({[SimplyGoStorageKey.AllExtensionEnabled]: target.checked})
-
-    const tab = await getActiveChromeTab();
-
-    if (!tab) return;
 
     const chromeMessage: ChromeMessage = {
       from: Sender.React,
-      message,
+      message: {
+        type: SimplyGoMethodEnum.TabUrlChanged,
+        data: tab.url
+      },
     }
 
     if (tab.id) {
@@ -106,8 +110,84 @@ function App() {
         tab.id,
         chromeMessage,
         (response) => {
-            setResponseFromContent(response);
-      });
+          setResponseFromContent(response);
+        }
+      );
+    }
+  }, [])
+
+  const fetchSwitchesEnabled = useCallback(async () => {
+    const storageSwitchesEnabled = await chrome.storage?.sync.get(switchKeyList);
+      
+    if (typeof storageSwitchesEnabled[SimplyGoSwitchKeyEnum.AllExtensionEnabled] === 'boolean') {
+      setAllExtensionIsEnabled(storageSwitchesEnabled[SimplyGoSwitchKeyEnum.AllExtensionEnabled]);
+    }
+
+    setSwitchesEnabled(storageSwitchesEnabled || {});
+  }, [])
+
+  useEffect(() => {
+    fetchSwitchesEnabled();
+  }, [fetchSwitchesEnabled]);
+
+  useEffect(() => {
+    fetchTabs();
+  }, [fetchTabs]);
+
+  function processTabUrl(tabUrl: string | undefined) {
+    if (tabUrl) {
+      setCurrentTabUrl(tabUrl);
+
+      const urlObj = new URL(tabUrl);
+      setIsSimplyGoURL(urlObj.host === process.env.REACT_APP_SIMPLYGO_DOMAIN);
+    }
+  }
+
+  const switchOnClicked = async (event: React.SyntheticEvent) => {
+    const tab = await getActiveChromeTab();
+
+    if (!tab) return;
+
+    if (tab.id) {
+      const target = event.target as HTMLInputElement;
+
+      const isChecked = target.checked;
+
+      const updateStorageObj = {
+        [target.id]: !isChecked
+      };
+
+      await chrome.storage?.sync.set(updateStorageObj);
+
+      const newSwitchesEnabled = {
+        ...switchesEnabled,
+        ...updateStorageObj,
+      };
+
+      if (target.id === SimplyGoSwitchKeyEnum.AllExtensionEnabled) {
+        setAllExtensionIsEnabled(!isChecked);
+      }
+
+      setSwitchesEnabled(newSwitchesEnabled);
+
+      let message = {
+        type: SimplyGoMethodEnum.SwitchChanged,
+        data: newSwitchesEnabled,
+        updated: updateStorageObj
+      };
+
+      const chromeMessage: ChromeMessage = {
+        from: Sender.React,
+        message
+      };
+      
+      chrome.tabs?.sendMessage(
+        tab.id,
+        chromeMessage,
+        (response) => {
+          setResponseFromContent(response);
+        }
+      );
     }
   }
 
@@ -121,22 +201,27 @@ function App() {
             <Grid xs={12} display="flex" justifyContent="center">
               <NonSimplyGoURLMessage isSimplyGoURL={isSimplyGoURL}/>
             </Grid>
-            <Grid xs={12} display="flex" justifyContent="center">
-              <FormControlLabel
-                value="start"
-                control={<Switch color="primary" />}
-                label="All extension features"
-                labelPlacement="start"
-                checked={allExtensionEnabled}
-                disabled={!isSimplyGoURL}
-                onChange={allExtensionFeatureOnChanged}
-              />
-            </Grid>
-            <Grid xs={12} display="flex" justifyContent="center">
-              URL: {currentTabUrl}
-            </Grid>
-            <Grid xs={12} display="flex" justifyContent="center">
-              responseFromContent: {responseFromContent}
+            
+            <Grid container xs={12} display="flex" justifyContent="center" spacing={1}>
+              {
+                switchList.map((singleSwitch) => {
+                  return (
+                    <Grid xs={12} display="flex" justifyContent="center" alignItems="center" key={singleSwitch.key}>
+                      <Typography variant='body1' sx={{ flexGrow: 1, wordBreak: 'break-all' }}>
+                        {singleSwitch.label}
+                      </Typography>
+                      <Switch
+                        id={singleSwitch.key}
+                        color="primary"
+                        checked={switchesEnabled[singleSwitch.key]}
+                        value={switchesEnabled[singleSwitch.key]}
+                        onClick={switchOnClicked}
+                        disabled={!isSimplyGoURL || (singleSwitch.key !== SimplyGoSwitchKeyEnum.AllExtensionEnabled && !allExtensionIsEnabled)}
+                      />
+                    </Grid>
+                  )
+                })
+              }
             </Grid>
           </Grid>
         </Paper>
