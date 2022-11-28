@@ -1,12 +1,12 @@
 import { Link, Typography } from "@mui/material";
 import { useState } from "react";
 
-function NonSimplyGoURLMessage(props: { isSimplyGoURL: boolean; }) {
-  const isSimplyGoURL = props.isSimplyGoURL;
+function NonSimplyGoURLMessage(props: { isSimplyGoHost: boolean; }) {
+  const isSimplyGoHost = props.isSimplyGoHost;
 
   const [simplyGoUrl,] = useState<string>('https://' + process.env.REACT_APP_SIMPLYGO_DOMAIN);
 
-  if (isSimplyGoURL) {
+  if (isSimplyGoHost) {
     return null;
   }
 

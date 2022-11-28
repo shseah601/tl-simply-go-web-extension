@@ -16,10 +16,15 @@ export enum SimplyGoSwitchKeyEnum {
     BootstrapEnabled = 'bootstrapEnabled',
     AutoCalculationOnLoad = 'autoCalculationOnLoad',
     MonthlyFilterEnabled = 'monthlyFilterEnabled',
+    DarkThemeEnabled = 'darkThemeEnabled',
 }
 
 export enum SimplyGoStorageKeyEnum {
 
+}
+
+export enum SimplyGoPage {
+    Transaction = 'https://simplygo.transitlink.com.sg/Cards/Transactions',
 }
 
 export interface ChromeMessage {

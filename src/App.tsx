@@ -14,27 +14,36 @@ import Grid from '@mui/material/Unstable_Grid2';
 import NonSimplyGoURLMessage from './components/NonSimplyGoURLMessage';
 import SimplyGoHeader from './components/SimplyGoHeader';
 import SimplyGoFooter from './components/SimplyGoFooter';
-import { ChromeMessage, Sender, SimplyGoMethodEnum, SimplyGoSwitchKeyEnum } from './types';
+import { ChromeMessage, Sender, SimplyGoMethodEnum, SimplyGoPage, SimplyGoSwitchKeyEnum } from './types';
 import { getActiveChromeTab } from './helpers/helper';
 
 const switchKeyList = Object.values(SimplyGoSwitchKeyEnum);
 
-const switchList: { key: string, label: string }[] = [
+const switchList: { key: string; label: string; isGlobal?: boolean; restrictPage?: string[] }[] = [
+  {
+    key: SimplyGoSwitchKeyEnum.DarkThemeEnabled,
+    label: 'Dark Theme',
+    isGlobal: true,
+  },
   {
     key: SimplyGoSwitchKeyEnum.AllExtensionEnabled,
     label: 'All Features',
+    isGlobal: true,
   },
   {
     key: SimplyGoSwitchKeyEnum.BootstrapEnabled,
     label: 'Bootstrap CSS',
+    restrictPage: [SimplyGoPage.Transaction]
   },
   {
     key: SimplyGoSwitchKeyEnum.AutoCalculationOnLoad,
     label: 'Auto Run Calculation',
+    restrictPage: [SimplyGoPage.Transaction]
   },
   {
     key: SimplyGoSwitchKeyEnum.MonthlyFilterEnabled,
     label: 'Monthly Filter',
+    restrictPage: [SimplyGoPage.Transaction]
   }
 ];
 
@@ -46,22 +55,22 @@ for (const key of switchKeyList) {
 function App() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
-  const theme = React.useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: prefersDarkMode ? 'dark' : 'light',
-        },
-      }),
-    [prefersDarkMode],
-  );
-
-  const [, setCurrentTabUrl] = useState<string>('');
-  const [isSimplyGoURL, setIsSimplyGoURL] = useState<boolean>(true);
+  const [currentTabUrl, setCurrentTabUrl] = useState<string>('');
+  const [isSimplyGoHost, setIsSimplyGoHost] = useState<boolean>(true);
   const [switchesEnabled, setSwitchesEnabled] = useState<{[key: string]: boolean}>(initSwitchesEnabled);
   const [allExtensionIsEnabled, setAllExtensionIsEnabled] = useState<boolean>(true);
   const [, setResponseFromContent] = useState<string>('');
   
+  const theme = React.useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode: switchesEnabled[SimplyGoSwitchKeyEnum.DarkThemeEnabled] ? 'dark' : 'light',
+        },
+      }),
+    [switchesEnabled],
+  );
+
   // chrome.tabs?.onUpdated.addListener(
   //   (tabId, changeInfo, tab) => {
   //     if (tab.active && changeInfo.url) {
@@ -93,7 +102,7 @@ function App() {
   const fetchTabs = useCallback(async () => {
     const tab = await getActiveChromeTab();
 
-    if (!tab) return;
+    if (!tab || !tab.url) return;
 
     processTabUrl(tab.url);
 
@@ -105,7 +114,9 @@ function App() {
       },
     }
 
-    if (tab.id) {
+    const urlObj = new URL(tab.url);
+
+    if (tab.id && urlObj.host === process.env.REACT_APP_SIMPLYGO_DOMAIN) {
       chrome.tabs?.sendMessage(
         tab.id,
         chromeMessage,
@@ -121,6 +132,13 @@ function App() {
       
     if (typeof storageSwitchesEnabled[SimplyGoSwitchKeyEnum.AllExtensionEnabled] === 'boolean') {
       setAllExtensionIsEnabled(storageSwitchesEnabled[SimplyGoSwitchKeyEnum.AllExtensionEnabled]);
+    }
+
+    const newSwitchesEnabled = storageSwitchesEnabled || {};
+
+    if (typeof newSwitchesEnabled[SimplyGoSwitchKeyEnum.DarkThemeEnabled] !== 'boolean') {
+      // not yet set value, follow system preference
+      newSwitchesEnabled[SimplyGoSwitchKeyEnum.DarkThemeEnabled] = prefersDarkMode;
     }
 
     setSwitchesEnabled(storageSwitchesEnabled || {});
@@ -139,7 +157,7 @@ function App() {
       setCurrentTabUrl(tabUrl);
 
       const urlObj = new URL(tabUrl);
-      setIsSimplyGoURL(urlObj.host === process.env.REACT_APP_SIMPLYGO_DOMAIN);
+      setIsSimplyGoHost(urlObj.host === process.env.REACT_APP_SIMPLYGO_DOMAIN);
     }
   }
 
@@ -180,14 +198,20 @@ function App() {
         from: Sender.React,
         message
       };
+
+      if (!tab.url) return;
+
+      const urlObj = new URL(tab.url);
       
-      chrome.tabs?.sendMessage(
-        tab.id,
-        chromeMessage,
-        (response) => {
-          setResponseFromContent(response);
-        }
-      );
+      if (urlObj.host === process.env.REACT_APP_SIMPLYGO_DOMAIN) {
+        chrome.tabs?.sendMessage(
+          tab.id,
+          chromeMessage,
+          (response) => {
+            setResponseFromContent(response);
+          }
+        );
+      }
     }
   }
 
@@ -199,7 +223,7 @@ function App() {
         <Paper square sx={{ height: '100%', p: 2 }}>
           <Grid container>
             <Grid xs={12} display="flex" justifyContent="center">
-              <NonSimplyGoURLMessage isSimplyGoURL={isSimplyGoURL}/>
+              <NonSimplyGoURLMessage isSimplyGoHost={isSimplyGoHost}/>
             </Grid>
             
             <Grid container xs={12} display="flex" justifyContent="center" spacing={1}>
@@ -216,7 +240,7 @@ function App() {
                         checked={switchesEnabled[singleSwitch.key]}
                         value={switchesEnabled[singleSwitch.key]}
                         onClick={switchOnClicked}
-                        disabled={!isSimplyGoURL || (singleSwitch.key !== SimplyGoSwitchKeyEnum.AllExtensionEnabled && !allExtensionIsEnabled)}
+                        disabled={(singleSwitch.restrictPage && !singleSwitch.restrictPage.includes(currentTabUrl)) || (!singleSwitch.isGlobal && !allExtensionIsEnabled)}
                       />
                     </Grid>
                   )

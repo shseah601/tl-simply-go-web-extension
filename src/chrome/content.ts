@@ -1,6 +1,6 @@
-import { ChromeMessage, Sender, SimplyGoMethodEnum, SimplyGoSwitchKeyEnum } from '../types';
+import { ChromeMessage, Sender, SimplyGoMethodEnum, SimplyGoPage, SimplyGoSwitchKeyEnum } from '../types';
 
-console.log('TL SimplyGo Extra Scripts Started');
+log('TL SimplyGo Extra Scripts Started');
 
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -9,7 +9,74 @@ let currentUrl = '';
 let statsResultParentObserver: MutationObserver | null = null;
 let allSwitchesEnabledObj: {[key: string]: boolean} = {};
 
-const loadFile = (type: string, url: string, integrity?: string) => {
+// on page load
+
+/**
+ * Fired when a message is sent from either an extension process or a content script.
+ */
+chrome.runtime.onMessage.addListener(messagesFromReactAppListener);
+
+const simplyGoSwitchKeyList = Object.values(SimplyGoSwitchKeyEnum);
+
+chrome.storage?.sync.get(simplyGoSwitchKeyList).then(async (storage) => {
+    const storageToUpdate: { [key: string]: boolean } = {};
+    for (const key of simplyGoSwitchKeyList) {
+        if (!(key in storage)) {
+            storageToUpdate[key] = true;
+        }
+    }
+
+    allSwitchesEnabledObj = { ...storage, ...storageToUpdate };
+
+    loadSettings(allSwitchesEnabledObj);
+    addCardTokenChangeListener();
+    addStatsResultMutationObserver();
+    checkUrlAndInitView();
+});
+
+function messagesFromReactAppListener(chromeMessage: ChromeMessage, sender: any, response: any) {
+    // log('[content.js]. Message received', {
+    //     chromeMessage,
+    //     sender,
+    //     runtimeId: chrome.runtime.id
+    // });
+
+    const parsedMessage = chromeMessage.message;
+
+    log(parsedMessage);
+
+    if (sender.id === chrome.runtime.id && chromeMessage.from === Sender.React) {
+        switch(parsedMessage.type) {
+            case SimplyGoMethodEnum.SwitchChanged: {
+                allSwitchesEnabledObj = parsedMessage.data;
+
+                processSwitchesEnabled();
+                break;
+            }
+            
+            case SimplyGoMethodEnum.TabUrlChanged: {
+                currentUrl = parsedMessage.data;
+                checkUrlAndInitView();
+                break;
+            }
+
+            default:
+                break;
+        }
+    }
+
+    response('Message received');
+
+    return true;
+}
+
+function log(message?: any, ...optionalParams: any[]) {
+    if (process.env.REACT_APP_ENVIRONMENT !== 'production') {
+        console.log(message, ...optionalParams);
+    }
+}
+
+function loadFile(type: string, url: string, integrity?: string)  {
     let loadTag;
 
     if (type === 'css') {
@@ -43,7 +110,7 @@ const loadFile = (type: string, url: string, integrity?: string) => {
     document.head.appendChild(loadTag);
 }
 
-const unloadFile = (type: string, url: string) => {
+function unloadFile(type: string, url: string) {
     if (type === 'css') {
         const cssLoaded = document.querySelector(`link[href="${url}"]`);
         if (!cssLoaded) return;
@@ -57,25 +124,27 @@ const unloadFile = (type: string, url: string) => {
     }
 }
 
-const loadBootstrap = () => {
+function loadBootstrap() {
     loadFile('css', chrome.runtime.getURL('lib/bootstrap/bootstrapV5.min.css'), 'sha384-wqEnpRlo+HLSAO3GXa2PtWYvQ8RWOXq6hsXQg9Ve1+WEzUTHYcbX5e2mvfeHVdcL');
     loadFile('script', chrome.runtime.getURL('lib/bootstrap/bootstrapV5.bundle.min.js'), 'sha384-ythp3mFRtGaaes/lNNTAeevFFzDQFpPspapd0oedlv4BkCyTEu+jdxBkJ6lh1/nv');
 }
 
-const unloadBootstrap = () => {
+function unloadBootstrap() {
     unloadFile('css', chrome.runtime.getURL('lib/bootstrap/bootstrapV5.min.css'));
     unloadFile('script', chrome.runtime.getURL('lib/bootstrap/bootstrapV5.bundle.min.js'));
 }
 
-const loadInitFiles = () => {
-    loadBootstrap();
+function loadInitFiles() {
+    if (checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.BootstrapEnabled)) {
+        loadBootstrap();
+    }
 }
 
-const unloadInitFiles = () => {
+function unloadInitFiles() {
     unloadBootstrap();
 }
 
-const checkIsSwitchEnabled = (switchKey: SimplyGoSwitchKeyEnum) => {
+function checkIsSwitchEnabled(switchKey: SimplyGoSwitchKeyEnum) {
     if (typeof allSwitchesEnabledObj[SimplyGoSwitchKeyEnum.AllExtensionEnabled] === 'boolean' && !allSwitchesEnabledObj[SimplyGoSwitchKeyEnum.AllExtensionEnabled]) {
         return false;
     }
@@ -84,7 +153,7 @@ const checkIsSwitchEnabled = (switchKey: SimplyGoSwitchKeyEnum) => {
     return typeof allSwitchesEnabledObj[switchKey] !== 'boolean' || allSwitchesEnabledObj[switchKey];
 }
 
-const loadSettings = async (allSwitchesEnabledObj: { [key: string]: boolean }) => {
+function loadSettings(allSwitchesEnabledObj: { [key: string]: boolean }) {
     if (checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.AllExtensionEnabled)) {
         loadInitFiles();
     } else {
@@ -93,7 +162,7 @@ const loadSettings = async (allSwitchesEnabledObj: { [key: string]: boolean }) =
     }
 }
 
-const processSwitchesEnabled = (allSwitchesEnabledObj?: {[key: string]: boolean}) => {
+function processSwitchesEnabled(allSwitchesEnabledObj?: {[key: string]: boolean}) {
     // bootstrap
     if (checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.BootstrapEnabled)) {
         loadBootstrap();
@@ -101,26 +170,28 @@ const processSwitchesEnabled = (allSwitchesEnabledObj?: {[key: string]: boolean}
         unloadBootstrap();
     }
 
-    // manual calculation
-    // if (checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.AutoCalculationOnLoad)) {
-    //     removeCalculateTotalAmountButton();
-    //     // addStatsResultMutationObserver();
-    // } else {
-    //     addCalculateTotalAmountButton();
-    //     // removeStatsResultMutationObserver();
-    // }
-
-    // monthly filter
-    if (checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.MonthlyFilterEnabled)) {
-        addExtraYearMonthFilter();
-        // addStatsResultMutationObserver();
-    } else {
-        removeExtraYearMonthFilter();
-        // removeStatsResultMutationObserver();
+    if (currentUrl === SimplyGoPage.Transaction) {
+        // manual calculation
+        if (checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.AutoCalculationOnLoad) || !checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.AllExtensionEnabled)) {
+            removeCalculateTotalAmountButton();
+            // addStatsResultMutationObserver();
+        } else {
+            addCalculateTotalAmountButton();
+            // removeStatsResultMutationObserver();
+        }
+    
+        // monthly filter
+        if (checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.MonthlyFilterEnabled)) {
+            addExtraYearMonthFilter();
+            // addStatsResultMutationObserver();
+        } else {
+            removeExtraYearMonthFilter();
+            // removeStatsResultMutationObserver();
+        }
     }
 }
 
-const calculateTrxAmount = (type?: string) => {
+function calculateTrxAmount(type?: string) {
     const fromDateInput = document.querySelector('#FromDate') as HTMLInputElement;
     const toDateInput = document.querySelector('#ToDate') as HTMLInputElement;
 
@@ -146,16 +217,16 @@ const calculateTrxAmount = (type?: string) => {
         total += convertMoneyTextToNumber(trxAmountRow.innerText);
     }
 
-    console.log(`From ${fromDateString} to ${toDateString}`, convertTotalCentsToSGD(total));
+    log(`From ${fromDateString} to ${toDateString}`, convertTotalCentsToSGD(total));
 
     return total;
 }
 
-const convertTotalCentsToSGD = (total: number) => {
+function convertTotalCentsToSGD(total: number) {
     return `$${(total / 100).toFixed(2)}`;
 }
 
-const convertMoneyTextToNumber = (moneyText: string) => {
+function convertMoneyTextToNumber(moneyText: string) {
 
     let convertedMoney = 0;
 
@@ -175,7 +246,7 @@ const convertMoneyTextToNumber = (moneyText: string) => {
     return convertedMoney;
 }
 
-const convertMoneyNumberWhenValid = (moneyNumber: number) => {
+function convertMoneyNumberWhenValid(moneyNumber: number) {
     if (typeof moneyNumber !== 'number') {
         return 0;
     }
@@ -187,7 +258,7 @@ const convertMoneyNumberWhenValid = (moneyNumber: number) => {
     return 0;
 }
 
-const formatDate = (date: Date) => {
+function formatDate(date: Date) {
     const month = date.getMonth() + 1;
     const monthText = month.toString().padStart(2, '0');
 
@@ -197,7 +268,7 @@ const formatDate = (date: Date) => {
     return `${date.getFullYear()}-${monthText}-${dayText}`;
 }
 
-const fixPageHTMLandCSS = () => {
+function fixPageHTMLandCSS() {
     // remove extra dropdown icon
     const extaDropdownIcon = document.querySelector('body > div.Container > div.Menu > div > div > div.desktop-nav > ul > li > a > span') as HTMLElement;
     if (extaDropdownIcon) {
@@ -216,7 +287,7 @@ const fixPageHTMLandCSS = () => {
     }
 }
 
-const addExtraYearMonthFilter = () => {
+function addExtraYearMonthFilter() {
 
     let yearSelect = document.querySelector('#yearSelect') as HTMLSelectElement;
 
@@ -294,14 +365,14 @@ const addExtraYearMonthFilter = () => {
     addExtraYearMonthFilterChangeListener();
 }
 
-const removeExtraYearMonthFilter = () => {
+function removeExtraYearMonthFilter() {
     const yearSelect = document.querySelector('#yearSelect') as HTMLSelectElement;
 
     // nested layer (child to parent) = div#yearSelect -> div#yearSelectCol -> div.row -> div.bootstrapV5
     yearSelect?.parentElement?.parentElement?.parentElement?.remove();
 }
 
-const addExtraYearMonthFilterChangeListener = () => {
+function addExtraYearMonthFilterChangeListener() {
     const yearSelect = document.querySelector('#yearSelect') as HTMLSelectElement;
     const monthSelect = document.querySelector('#monthSelect') as HTMLSelectElement;
 
@@ -315,7 +386,7 @@ const addExtraYearMonthFilterChangeListener = () => {
     };
 }
 
-const addCardTokenChangeListener = () => {
+function addCardTokenChangeListener() {
     const cardTokenSelect = document.querySelector('#Card_Token') as HTMLSelectElement;
 
     if (!cardTokenSelect) return;
@@ -327,7 +398,7 @@ const addCardTokenChangeListener = () => {
     cardTokenSelect.onchange = checkUrlAndInitView;
 }
 
-const generateMonthSelectOptionConfigs = () => {
+function generateMonthSelectOptionConfigs() {
     const yearSelect = document.querySelector('#yearSelect') as HTMLSelectElement;
     const monthSelect = document.querySelector('#monthSelect') as HTMLSelectElement;
 
@@ -363,7 +434,7 @@ const generateMonthSelectOptionConfigs = () => {
     return monthOptionConfigs;
 }
 
-const refreshMonthSelectOptions = () => {
+function refreshMonthSelectOptions() {
     const monthSelect = document.querySelector('#monthSelect') as HTMLSelectElement;
 
     const monthSelectConfig: any = {
@@ -387,7 +458,7 @@ const refreshMonthSelectOptions = () => {
     }
 }
 
-const updateDefaultDateInput = () => {
+function updateDefaultDateInput() {
     const yearSelect = document.querySelector('#yearSelect') as HTMLSelectElement;
     const monthSelect = document.querySelector('#monthSelect') as HTMLSelectElement;
 
@@ -413,40 +484,40 @@ const updateDefaultDateInput = () => {
     defaultToDateInput.value = `${toDateDayNumber.toString().padStart(2, '0')}-${monthNamesShort[monthSelectValue]}-${yearSelectValue}`;
 }
 
-// const addCalculateTotalAmountButton = () => {
-//     const searchButtonGroups = document.querySelector('#Search_form > div') as HTMLDivElement;
+function addCalculateTotalAmountButton() {
+    const searchButtonGroups = document.querySelector('#Search_form > div') as HTMLDivElement;
 
-//     let calculateButton = document.querySelector('#calculateTotalBtn') as HTMLButtonElement;
+    let calculateButton = document.querySelector('#calculateTotalBtn') as HTMLButtonElement;
 
-//     if (calculateButton) return;
+    if (calculateButton) return;
 
-//     calculateButton = createBSButton({text: 'Calculate Total'});
-//     calculateButton.id = 'calculateTotalBtn';
-//     calculateButton.classList.add('btn-primary', 'float-start', 'me-2');
+    calculateButton = createBSButton({text: 'Calculate Total'});
+    calculateButton.id = 'calculateTotalBtn';
+    calculateButton.classList.add('btn-primary', 'float-start', 'me-2');
 
-//     // non bootstrap css support
-//     calculateButton.style.float = 'left';
+    // non bootstrap css support
+    calculateButton.style.float = 'left';
 
-//     calculateButton.onclick = () => {
-//         const totalPosted = calculateTrxAmount('posted');
-//         getTotalAmountResult(totalPosted, 'posted');
+    calculateButton.onclick = () => {
+        const totalPosted = calculateTrxAmount('posted');
+        getTotalAmountResult(totalPosted, 'posted');
 
-//         const total = calculateTrxAmount();
-//         getTotalAmountResult(total, '');
-//     };
+        const total = calculateTrxAmount();
+        getTotalAmountResult(total, '');
+    };
 
-//     const bsWrapper = createBSWrapper();
-//     bsWrapper.append(calculateButton);
+    const bsWrapper = createBSWrapper();
+    bsWrapper.append(calculateButton);
 
-//     searchButtonGroups.prepend(bsWrapper);
-// }
+    searchButtonGroups.prepend(bsWrapper);
+}
 
-// const removeCalculateTotalAmountButton = () => {
-//     const calculateButton = document.querySelector('#calculateTotalBtn') as HTMLButtonElement;
-//     calculateButton?.parentElement?.remove();
-// }
+function removeCalculateTotalAmountButton() {
+    const calculateButton = document.querySelector('#calculateTotalBtn') as HTMLButtonElement;
+    calculateButton?.parentElement?.remove();
+}
 
-const getTotalAmountResult = (total: number, type?: string) => {
+function getTotalAmountResult(total: number, type?: string) {
 
     let alertId = 'totalTransactionsAmountAlert';
     let title = 'Total';
@@ -466,7 +537,7 @@ const getTotalAmountResult = (total: number, type?: string) => {
     alert.innerText = title + ': ' + convertTotalCentsToSGD(total);
 }
 
-const getAlert = (alertId: string, alertConfig: { alertClass: string; }) => {
+function getAlert(alertId: string, alertConfig: { alertClass: string; }) {
     const transactionHistory = document.querySelector('#MyStat_result') as HTMLElement;
 
     let alert = document.querySelector('#' + alertId) as HTMLElement;
@@ -486,21 +557,21 @@ const getAlert = (alertId: string, alertConfig: { alertClass: string; }) => {
     return alert;
 }
 
-const removeAlert = (id: string) => {
+function removeAlert(id: string) {
     const alert = document.getElementById(id);
     alert?.parentElement?.remove();
 }
 
-// const createBSButton = (buttonConfig: { text: any; }) => {
-//     const button = document.createElement('button');
-//     button.type = 'button';
-//     button.classList.add('btn');
-//     button.innerText = buttonConfig.text;
+function createBSButton(buttonConfig: { text: any; }) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.classList.add('btn');
+    button.innerText = buttonConfig.text;
 
-//     return button;
-// }
+    return button;
+}
 
-const createBSSelect = (selectConfig: { optionConfigs: any; }) => {
+function createBSSelect(selectConfig: { optionConfigs: any; }) {
     const select = document.createElement('select');
     select.classList.add('form-select');
 
@@ -515,7 +586,7 @@ const createBSSelect = (selectConfig: { optionConfigs: any; }) => {
     return select;
 }
 
-const createBSSelectOption = (selectOptionConfig: { isSelected: any; value: any; text: any; }) => {
+function createBSSelectOption(selectOptionConfig: { isSelected: any; value: any; text: any; }) {
     const selectOption = document.createElement('option');
     if (selectOptionConfig.isSelected) {
         selectOption.selected = true;
@@ -532,32 +603,32 @@ const createBSSelectOption = (selectOptionConfig: { isSelected: any; value: any;
     return selectOption;
 }
 
-const createBSWrapper = () => {
+function createBSWrapper() {
     const div = document.createElement('div');
     div.classList.add('bootstrapV5');
 
     return div;
 }
 
-const checkUrlAndInitView = () => {
+function checkUrlAndInitView() {
     const searchTransactionTitle = document.querySelector('#Search_form > fieldset > legend') as HTMLElement;
     const statsResultTitle = document.querySelector('#MyStat_result > fieldset > legend') as HTMLElement;
 
-    if (currentUrl === 'https://simplygo.transitlink.com.sg/Cards/Transactions' || (searchTransactionTitle && statsResultTitle)) {
+    if (currentUrl === SimplyGoPage.Transaction || (searchTransactionTitle && statsResultTitle)) {
         fixPageHTMLandCSS();
         
         if (checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.MonthlyFilterEnabled)) {
             addExtraYearMonthFilter();
         }
 
-        // if (!checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.AutoCalculationOnLoad)) {
-        //     addCalculateTotalAmountButton();
-        // }
+        if (!checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.AutoCalculationOnLoad) && checkIsSwitchEnabled(SimplyGoSwitchKeyEnum.AllExtensionEnabled)) {
+            addCalculateTotalAmountButton();
+        }
     }
 }
 
-const mutationObserverListener = (mutationList: MutationRecord[], observer: MutationObserver) => {
-    console.log('mutationList', mutationList)
+function mutationObserverListener(mutationList: MutationRecord[], observer: MutationObserver) {
+    log('mutationList', mutationList)
     for (const mutation of mutationList) {
         if (mutation.type === 'childList') {
             removeAlert('totalTransactionsAmountAlert');
@@ -574,7 +645,7 @@ const mutationObserverListener = (mutationList: MutationRecord[], observer: Muta
     }
 }
 
-const addStatsResultMutationObserver = () => {
+function addStatsResultMutationObserver() {
     if (statsResultParentObserver) return;
 
     const statsResultParent = document.querySelector('#MyStat_result');
@@ -589,66 +660,9 @@ const addStatsResultMutationObserver = () => {
     statsResultParentObserver.observe(statsResultParent, config);
 }
 
-// const removeStatsResultMutationObserver = () => {
+// function removeStatsResultMutationObserver() {
 //     if (!statsResultParentObserver) return;
 
 //     statsResultParentObserver.disconnect();
 //     statsResultParentObserver = null;
 // }
-
-const messagesFromReactAppListener = (chromeMessage: ChromeMessage, sender: any, response: any) => {
-    // console.log('[content.js]. Message received', {
-    //     chromeMessage,
-    //     sender,
-    //     runtimeId: chrome.runtime.id
-    // });
-
-    const parsedMessage = chromeMessage.message;
-
-    console.log(parsedMessage);
-
-    if (sender.id === chrome.runtime.id && chromeMessage.from === Sender.React) {
-        switch(parsedMessage.type) {
-            case SimplyGoMethodEnum.SwitchChanged: {
-                allSwitchesEnabledObj = parsedMessage.data;
-
-                processSwitchesEnabled();
-                break;
-            }
-            
-            case SimplyGoMethodEnum.TabUrlChanged: {
-                currentUrl = parsedMessage.data;
-                checkUrlAndInitView();
-                break;
-            }
-
-            default:
-                break;
-        }
-    }
-}
-
-// on page load
-const simplyGoSwitchKeyList = Object.values(SimplyGoSwitchKeyEnum);
-
-chrome.storage?.sync.get(simplyGoSwitchKeyList).then(async (storage) => {
-    const storageToUpdate: { [key: string]: boolean } = {};
-    for (const key of simplyGoSwitchKeyList) {
-        if (!(key in storage)) {
-            storageToUpdate[key] = true;
-        }
-    }
-
-    allSwitchesEnabledObj = {...storage, ...storageToUpdate };
-
-    loadSettings(allSwitchesEnabledObj);
-    addCardTokenChangeListener();
-    addStatsResultMutationObserver();
-    checkUrlAndInitView();
-});
-
-
-/**
- * Fired when a message is sent from either an extension process or a content script.
- */
-chrome.runtime.onMessage.addListener(messagesFromReactAppListener);
