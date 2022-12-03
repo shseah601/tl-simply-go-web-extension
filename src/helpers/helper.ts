@@ -3,7 +3,7 @@ import { ValueOf } from "../types";
 export async function getActiveChromeTab() {
     const queryInfo: chrome.tabs.QueryInfo = { active: true, lastFocusedWindow: true };
 
-    const tabs = chrome.tabs && await chrome.tabs.query(queryInfo);
+    const tabs = await chrome.tabs?.query(queryInfo);
 
     if (!tabs || !tabs.length) return;
 
@@ -16,7 +16,7 @@ export async function currentTabGoToLink(url: string) {
     if (!tab) return;
 
     if (tab.id) {
-        await chrome.tabs.update(tab.id, { url })
+        await chrome.tabs?.update(tab.id, { url })
     }
 }
 

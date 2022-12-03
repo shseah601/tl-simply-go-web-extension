@@ -300,7 +300,7 @@ function addExtraYearMonthFilter() {
 
     const yearSelectCol = document.createElement('div');
     yearSelectCol.id = 'yearSelectCol';
-    yearSelectCol.classList.add('col-4');
+    yearSelectCol.classList.add('col-4', 'p-2');
 
     const yearSelectConfig: any = {
         optionConfigs: [
@@ -332,7 +332,7 @@ function addExtraYearMonthFilter() {
 
     const monthSelectCol = document.createElement('div');
     monthSelectCol.id = 'monthSelectCol';
-    monthSelectCol.classList.add('col-4');
+    monthSelectCol.classList.add('col-4', 'p-2');
 
     const monthSelectConfig: any = {
         optionConfigs: [

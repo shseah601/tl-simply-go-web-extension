@@ -4,8 +4,7 @@ module.exports = {
             return {
                 ...webpackConfig,
                 entry: {
-                    main: [env === 'development' &&
-                    require.resolve('react-dev-utils/webpackHotDevClient'),paths.appIndexJs].filter(Boolean),
+                    main: [env === 'development' && require.resolve('react-dev-utils/webpackHotDevClient'), paths.appIndexJs].filter(Boolean),
                     content: './src/chrome/content.ts',
                 },
                 output: {

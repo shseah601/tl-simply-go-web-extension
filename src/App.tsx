@@ -25,26 +25,26 @@ const switchList: { key: string; label: string; isGlobal?: boolean; restrictPage
     label: 'Dark Theme',
     isGlobal: true,
   },
-  {
-    key: SimplyGoSwitchKeyEnum.AllExtensionEnabled,
-    label: 'All Features',
-    isGlobal: true,
-  },
-  {
-    key: SimplyGoSwitchKeyEnum.BootstrapEnabled,
-    label: 'Bootstrap CSS',
-    restrictPage: [SimplyGoPage.Transaction]
-  },
-  {
-    key: SimplyGoSwitchKeyEnum.AutoCalculationOnLoad,
-    label: 'Auto Run Calculation',
-    restrictPage: [SimplyGoPage.Transaction]
-  },
-  {
-    key: SimplyGoSwitchKeyEnum.MonthlyFilterEnabled,
-    label: 'Monthly Filter',
-    restrictPage: [SimplyGoPage.Transaction]
-  }
+  // {
+  //   key: SimplyGoSwitchKeyEnum.AllExtensionEnabled,
+  //   label: 'All Features',
+  //   isGlobal: true,
+  // },
+  // {
+  //   key: SimplyGoSwitchKeyEnum.BootstrapEnabled,
+  //   label: 'Bootstrap CSS',
+  //   restrictPage: [SimplyGoPage.Transaction]
+  // },
+  // {
+  //   key: SimplyGoSwitchKeyEnum.AutoCalculationOnLoad,
+  //   label: 'Auto Run Calculation',
+  //   restrictPage: [SimplyGoPage.Transaction]
+  // },
+  // {
+  //   key: SimplyGoSwitchKeyEnum.MonthlyFilterEnabled,
+  //   label: 'Monthly Filter',
+  //   restrictPage: [SimplyGoPage.Transaction]
+  // }
 ];
 
 const initSwitchesEnabled: { [key: string]: boolean } = {};
@@ -56,7 +56,7 @@ function App() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
   const [currentTabUrl, setCurrentTabUrl] = useState<string>('');
-  const [isSimplyGoHost, setIsSimplyGoHost] = useState<boolean>(true);
+  const [isSimplyGoHost, setIsSimplyGoHost] = useState<boolean>(false);
   const [switchesEnabled, setSwitchesEnabled] = useState<{[key: string]: boolean}>(initSwitchesEnabled);
   const [allExtensionIsEnabled, setAllExtensionIsEnabled] = useState<boolean>(true);
   const [, setResponseFromContent] = useState<string>('');
@@ -129,19 +129,29 @@ function App() {
 
   const fetchSwitchesEnabled = useCallback(async () => {
     const storageSwitchesEnabled = await chrome.storage?.sync.get(switchKeyList);
-      
-    if (typeof storageSwitchesEnabled[SimplyGoSwitchKeyEnum.AllExtensionEnabled] === 'boolean') {
-      setAllExtensionIsEnabled(storageSwitchesEnabled[SimplyGoSwitchKeyEnum.AllExtensionEnabled]);
+    const simplyGoSwitchKeyList = Object.values(SimplyGoSwitchKeyEnum);
+
+    const storageToUpdate: { [key: string]: boolean } = {};
+    for (const key of simplyGoSwitchKeyList) {
+        if (!(key in storageSwitchesEnabled)) {
+            storageToUpdate[key] = true;
+        }
     }
 
-    const newSwitchesEnabled = storageSwitchesEnabled || {};
+    const allSwitchesEnabledObj = { ...storageSwitchesEnabled, ...storageToUpdate };
+      
+    if (typeof allSwitchesEnabledObj[SimplyGoSwitchKeyEnum.AllExtensionEnabled] === 'boolean') {
+      setAllExtensionIsEnabled(allSwitchesEnabledObj[SimplyGoSwitchKeyEnum.AllExtensionEnabled]);
+    }
+
+    const newSwitchesEnabled = allSwitchesEnabledObj;
 
     if (typeof newSwitchesEnabled[SimplyGoSwitchKeyEnum.DarkThemeEnabled] !== 'boolean') {
       // not yet set value, follow system preference
       newSwitchesEnabled[SimplyGoSwitchKeyEnum.DarkThemeEnabled] = prefersDarkMode;
     }
 
-    setSwitchesEnabled(storageSwitchesEnabled || {});
+    setSwitchesEnabled(allSwitchesEnabledObj);
   }, [])
 
   useEffect(() => {
