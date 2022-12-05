@@ -10,7 +10,7 @@ function SimplyGoHeader() {
       <Link href={process.env.REACT_APP_SIMPLYGO_EXTENSION_LINK}>
         <Avatar
           alt="SimplyGo Extension Logo"
-          src="logo/logo-512.png"
+          src="logo/logo-128.png"
           sx={{ width: 48, height: 48 }}
           variant="square"
         />
@@ -19,7 +19,7 @@ function SimplyGoHeader() {
     simplyGoLogo =
       <Avatar
         alt="SimplyGo Extension Logo"
-        src="logo/logo-512.png"
+        src="logo/logo-128.png"
         sx={{ width: 48, height: 48 }}
         variant="square"
       />
