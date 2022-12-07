@@ -1,7 +1,7 @@
 import { ValueOf } from "../types";
 
 export async function getActiveChromeTab() {
-    const queryInfo: chrome.tabs.QueryInfo = { active: true, lastFocusedWindow: true };
+    const queryInfo: chrome.tabs.QueryInfo = { active: true, currentWindow: true };
 
     const tabs = await chrome.tabs?.query(queryInfo);
 
