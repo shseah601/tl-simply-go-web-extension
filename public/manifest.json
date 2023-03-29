@@ -1,16 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Simply Go Extension",
-  "version": "1.0.1.1",
-  "version_name": "1.0.1.1 build 20221207-2",
+  "version": "1.1.0.0",
+  "version_name": "1.1.0.0 build 20230326-1",
   "description": "Extra functionalities for Simply Go",
+  "options_page": "dashboard.html",
   "action": {
     "default_icon": {
       "16": "logo/logo-16.png",
       "32": "logo/logo-32.png"
     },
     "default_title": "SimplyGo Extra",
-    "default_popup": "index.html"
+    "default_popup": "popup.html"
   },
   "icons": {
     "16": "logo/logo-16.png",

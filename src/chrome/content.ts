@@ -14,7 +14,7 @@ let allSwitchesEnabledObj: {[key: string]: boolean} = {};
 /**
  * Fired when a message is sent from either an extension process or a content script.
  */
-chrome.runtime.onMessage.addListener(messagesFromReactAppListener);
+chrome.runtime?.onMessage.addListener(messagesFromReactAppListener);
 
 const simplyGoSwitchKeyList = Object.values(SimplyGoSwitchKeyEnum);
 
@@ -38,14 +38,14 @@ function messagesFromReactAppListener(chromeMessage: ChromeMessage, sender: any,
     // log('[content.js]. Message received', {
     //     chromeMessage,
     //     sender,
-    //     runtimeId: chrome.runtime.id
+    //     runtimeId: chrome.runtime?.id
     // });
 
     const parsedMessage = chromeMessage.message;
 
     log(parsedMessage);
 
-    if (sender.id === chrome.runtime.id && chromeMessage.from === Sender.React) {
+    if (sender.id === chrome.runtime?.id && chromeMessage.from === Sender.React) {
         switch(parsedMessage.type) {
             case SimplyGoMethodEnum.SwitchChanged: {
                 allSwitchesEnabledObj = parsedMessage.data;
@@ -125,13 +125,13 @@ function unloadFile(type: string, url: string) {
 }
 
 function loadBootstrap() {
-    loadFile('css', chrome.runtime.getURL('lib/bootstrap/bootstrapV5.min.css'), 'sha384-wqEnpRlo+HLSAO3GXa2PtWYvQ8RWOXq6hsXQg9Ve1+WEzUTHYcbX5e2mvfeHVdcL');
-    loadFile('script', chrome.runtime.getURL('lib/bootstrap/bootstrapV5.bundle.min.js'), 'sha384-ythp3mFRtGaaes/lNNTAeevFFzDQFpPspapd0oedlv4BkCyTEu+jdxBkJ6lh1/nv');
+    loadFile('css', chrome.runtime?.getURL('lib/bootstrap/bootstrapV5.min.css'), 'sha384-wqEnpRlo+HLSAO3GXa2PtWYvQ8RWOXq6hsXQg9Ve1+WEzUTHYcbX5e2mvfeHVdcL');
+    loadFile('script', chrome.runtime?.getURL('lib/bootstrap/bootstrapV5.bundle.min.js'), 'sha384-ythp3mFRtGaaes/lNNTAeevFFzDQFpPspapd0oedlv4BkCyTEu+jdxBkJ6lh1/nv');
 }
 
 function unloadBootstrap() {
-    unloadFile('css', chrome.runtime.getURL('lib/bootstrap/bootstrapV5.min.css'));
-    unloadFile('script', chrome.runtime.getURL('lib/bootstrap/bootstrapV5.bundle.min.js'));
+    unloadFile('css', chrome.runtime?.getURL('lib/bootstrap/bootstrapV5.min.css'));
+    unloadFile('script', chrome.runtime?.getURL('lib/bootstrap/bootstrapV5.bundle.min.js'));
 }
 
 function loadInitFiles() {

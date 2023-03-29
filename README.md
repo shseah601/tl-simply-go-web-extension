@@ -44,3 +44,11 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## Bootstrap Custom Class
+
+In order to use bootstrap and not to conflict with other classes, we need to build the bootstrap ourselves. Go to [Build Bootstrap With Namespace Guide](https://github.com/shseah601/bootstrap/tree/main-namespace-v5#bootstrap-5-namespaced)
+
+## References
+1. [How To Create A Google Chrome Extension With React](https://medium.com/litslink/how-to-create-google-chrome-extension-using-react-js-5c9e343323ff)
+

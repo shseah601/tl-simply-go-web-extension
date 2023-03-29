@@ -1,10 +1,3 @@
-export type ValueOf<T> = T[keyof T];
-
-export enum Sender {
-    React,
-    Content
-}
-
 export enum SimplyGoMethodEnum {
     SwitchChanged = 'switchChanged',
     TabUrlChanged = 'tabUrlChanged',
@@ -25,9 +18,4 @@ export enum SimplyGoStorageKeyEnum {
 
 export enum SimplyGoPage {
     Transaction = 'https://simplygo.transitlink.com.sg/Cards/Transactions',
-}
-
-export interface ChromeMessage {
-    from: Sender,
-    message: any,
 }

@@ -1,5 +1,6 @@
 import { Avatar, Link, Typography } from '@mui/material';
 import Button from '@mui/material/Button';
+import './KofiButton.scss';
 
 function KofiButton() {
   return(
@@ -9,7 +10,7 @@ function KofiButton() {
         color="secondary"
         startIcon={<Avatar src={'img/kofi_logo_nolabel.webp'} />}
       >
-        <Typography variant="button" sx={{ fontSize: 14, fontWeight: 'bold' }}>
+        <Typography variant="button" className='button-text'>
           Support me on Ko-fi
         </Typography>
       </Button>

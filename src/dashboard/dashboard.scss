@@ -4,7 +4,7 @@
 @import '@fontsource/roboto/700.css';
 
 $header-height: 64px;
-$footer-height: 64px;
+$footer-height: 116px;
 
 html, body, #root {
   // width: 300px;
@@ -23,15 +23,7 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
-.root-header {
-  width: 100%;
-
-  .MuiToolbar-root {
-    min-height: $header-height;
-  }
-}
-
-.root-content {
+.dashboard-content {
   height: calc(100% - $header-height - $footer-height);
   width: 100%;
 }

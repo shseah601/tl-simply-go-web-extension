@@ -11,10 +11,10 @@ import {
   Typography,
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
-import NonSimplyGoURLMessage from './components/NonSimplyGoURLMessage';
-import SimplyGoHeader from './components/SimplyGoHeader';
-import SimplyGoFooter from './components/SimplyGoFooter';
-import { ChromeMessage, Sender, SimplyGoMethodEnum, SimplyGoPage, SimplyGoSwitchKeyEnum } from './types';
+import NonSimplyGoURLMessage from './components/NonSimplyGoURLMessage/NonSimplyGoURLMessage';
+import SimplyGoHeader from './components/SimplyGoHeader/SimplyGoHeader';
+import SimplyGoFooter from './components/SimplyGoFooter/SimplyGoFooter';
+import { ChromeMessage, Sender, SimplyGoMethodEnum, SimplyGoSwitchKeyEnum } from './types';
 import { getActiveChromeTab } from './helpers/helper';
 
 const switchKeyList = Object.values(SimplyGoSwitchKeyEnum);
@@ -60,7 +60,7 @@ function App() {
   const [switchesEnabled, setSwitchesEnabled] = useState<{[key: string]: boolean}>(initSwitchesEnabled);
   const [allExtensionIsEnabled, setAllExtensionIsEnabled] = useState<boolean>(true);
   const [, setResponseFromContent] = useState<string>('');
-  
+
   const theme = React.useMemo(
     () =>
       createTheme({
@@ -128,7 +128,7 @@ function App() {
   }, [])
 
   const fetchSwitchesEnabled = useCallback(async () => {
-    const storageSwitchesEnabled = await chrome.storage?.sync.get(switchKeyList);
+    const storageSwitchesEnabled = await chrome.storage?.sync.get(switchKeyList) || {};
     const simplyGoSwitchKeyList = Object.values(SimplyGoSwitchKeyEnum);
 
     const storageToUpdate: { [key: string]: boolean } = {};
@@ -152,7 +152,7 @@ function App() {
     }
 
     setSwitchesEnabled(allSwitchesEnabledObj);
-  }, [])
+  }, [prefersDarkMode])
 
   useEffect(() => {
     fetchSwitchesEnabled();
@@ -228,39 +228,41 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <SimplyGoHeader />
-      <Box className="root-content">
-        <Paper square sx={{ height: '100%', p: 2 }}>
-          <Grid container>
-            <Grid xs={12} display="flex" justifyContent="center">
-              <NonSimplyGoURLMessage isSimplyGoHost={isSimplyGoHost}/>
+      <Box className="app-content">
+        <SimplyGoHeader />
+        <Box className="root-content">
+          <Paper square sx={{ height: '100%', p: 2 }}>
+            <Grid container>
+              <Grid xs={12} display="flex" justifyContent="center">
+                <NonSimplyGoURLMessage isSimplyGoHost={isSimplyGoHost}/>
+              </Grid>
+              
+              <Grid container xs={12} display="flex" justifyContent="center" spacing={1}>
+                {
+                  switchList.map((singleSwitch) => {
+                    return (
+                      <Grid xs={12} display="flex" justifyContent="center" alignItems="center" key={singleSwitch.key}>
+                        <Typography variant='body1' sx={{ flexGrow: 1, wordBreak: 'break-all' }}>
+                          {singleSwitch.label}
+                        </Typography>
+                        <Switch
+                          id={singleSwitch.key}
+                          color="primary"
+                          checked={switchesEnabled[singleSwitch.key]}
+                          value={switchesEnabled[singleSwitch.key]}
+                          onClick={switchOnClicked}
+                          disabled={(singleSwitch.restrictPage && !singleSwitch.restrictPage.includes(currentTabUrl)) || (!singleSwitch.isGlobal && !allExtensionIsEnabled)}
+                        />
+                      </Grid>
+                    )
+                  })
+                }
+              </Grid>
             </Grid>
-            
-            <Grid container xs={12} display="flex" justifyContent="center" spacing={1}>
-              {
-                switchList.map((singleSwitch) => {
-                  return (
-                    <Grid xs={12} display="flex" justifyContent="center" alignItems="center" key={singleSwitch.key}>
-                      <Typography variant='body1' sx={{ flexGrow: 1, wordBreak: 'break-all' }}>
-                        {singleSwitch.label}
-                      </Typography>
-                      <Switch
-                        id={singleSwitch.key}
-                        color="primary"
-                        checked={switchesEnabled[singleSwitch.key]}
-                        value={switchesEnabled[singleSwitch.key]}
-                        onClick={switchOnClicked}
-                        disabled={(singleSwitch.restrictPage && !singleSwitch.restrictPage.includes(currentTabUrl)) || (!singleSwitch.isGlobal && !allExtensionIsEnabled)}
-                      />
-                    </Grid>
-                  )
-                })
-              }
-            </Grid>
-          </Grid>
-        </Paper>
+          </Paper>
+        </Box>
+        <SimplyGoFooter />
       </Box>
-      <SimplyGoFooter />
     </ThemeProvider>
   );
 }

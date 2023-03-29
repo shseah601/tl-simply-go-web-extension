@@ -7,7 +7,7 @@ function SimplyGoHeader() {
   let simplyGoLogo: JSX.Element;
   if (process.env.REACT_APP_SIMPLYGO_EXTENSION_LINK) {
     simplyGoLogo =
-      <Link href={process.env.REACT_APP_SIMPLYGO_EXTENSION_LINK}>
+      <Link href={process.env.REACT_APP_SIMPLYGO_EXTENSION_LINK} target="_blank">
         <Avatar
           alt="SimplyGo Extension Logo"
           src="logo/logo-128.png"
